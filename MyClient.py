@@ -1,16 +1,21 @@
 import discord
+from discord.ext import commands
+import EFTChangesAPI
+
+intents = discord.Intents.default()
+intents.message_content = True
+bot = commands.Bot(command_prefix='!', intents=intents)
 
 
-class MyClient(discord.Client):
-    async def on_ready(self):
-        print(self.user, "로 로그인 함")
+@bot.event
+async def on_ready():
+    print(bot.user.name, "로 로그인 함")
 
-    async def on_message(self, message):
-        # don't respond to ourselves
-        if message.author == self.user:
-            return
 
-        if message.content == '타르코프':
-            await message.channel.send('망겜')
+@bot.command()
+async def 탄약(ctx, *, message):
+    search_result = EFTChangesAPI.ammo_search(message)
+    await ctx.send(search_result)
 
-        print("[", message.guild.name, "]", "[", message.channel, "] [", message.author, "] ", message.content)
+token = ""
+bot.run(token)
