@@ -1,5 +1,7 @@
 import requests
 import json
+import urllib.request
+import discord
 
 url = "https://api.tarkov-changes.com/v1/"
 headers = {
@@ -17,7 +19,6 @@ def ammo_search(msg):
     result = ""
 
     for i in range(len(data['results'])):
-        print(data['results'][i]['Name'] + " " + data['results'][i]['Buckshot Count'])
         result = result + data['results'][i]['Name'] + "\n"
 
         if int(data['results'][i]['Buckshot Count']) == 0:
