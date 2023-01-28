@@ -1,7 +1,5 @@
 import requests
 import json
-import urllib.request
-import discord
 
 url = "https://api.tarkov-changes.com/v1/"
 headers = {
