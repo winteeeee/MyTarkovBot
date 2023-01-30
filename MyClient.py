@@ -77,10 +77,10 @@ async def 가격(ctx, *, message):
 
     await loop.run_in_executor(None, driver.get, "https://tarkov-market.com/")
     element = driver.find_element_by_css_selector("""#__layout > div > div > div.page-content > div.w-100 > div.search > input[type=text]""")
-    await loop.run_in_executor(None, element.send_keys, message)
+    element.send_keys(message)
 
     await asyncio.sleep(1.5)
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
+    soup = await loop.run_in_executor(None, BeautifulSoup, driver.page_source, 'html.parser')
 
     if len(soup.find(class_="cards-list").text) > 100:
         if soup.find(class_="minus"):
@@ -118,7 +118,7 @@ async def 검색(ctx, *, message):
     search_bar.send_keys(message)
 
     await asyncio.sleep(1)
-    soup = BeautifulSoup(driver.page_source, 'html.parser')
+    soup = await loop.run_in_executor(None, BeautifulSoup, driver.page_source, 'html.parser')
 
     if soup.find(class_="wds-list wds-is-linked SearchResults-module_results__k8itn") is not None:
         link = soup.select_one("body > div.search-modal > div > ul > li:nth-child(1) > a")["href"]
