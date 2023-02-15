@@ -3,8 +3,10 @@ from datetime import datetime
 import discord
 from discord.ext import commands
 import EFTChangesAPI
+import TarkovDevAPI
 from bs4 import BeautifulSoup
 from selenium import webdriver
+import sys
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -69,35 +71,54 @@ async def 지도_error(ctx, error):
 
 
 @bot.command()
-async def 가격(ctx, *, message):
-    print(datetime.today().strftime("%Y-%m-%d %H:%M:%S"),"[", ctx.message.guild.name, "]", "[", ctx.message.channel, "] [", ctx.message.author, "] ", "가격 명령어 호출함")
-    loop = asyncio.get_event_loop()
-    path = "resource/chromedriver.exe"
-    driver = webdriver.Chrome(path)
+async def 아이템(ctx, *, message):
+    print(datetime.today().strftime("%Y-%m-%d %H:%M:%S"),"[", ctx.message.guild.name, "]", "[", ctx.message.channel, "] [", ctx.message.author, "] ", "아이템 명령어 호출함")
+    result = TarkovDevAPI.item_query(message)
 
-    await loop.run_in_executor(None, driver.get, "https://tarkov-market.com/")
-    element = driver.find_element_by_css_selector("""#__layout > div > div > div.page-content > div.w-100 > div.search > input[type=text]""")
-    element.send_keys(message)
-
-    await asyncio.sleep(1.5)
-    soup = await loop.run_in_executor(None, BeautifulSoup, driver.page_source, 'html.parser')
-
-    if len(soup.find(class_="cards-list").text) > 100:
-        if soup.find(class_="minus"):
-            await ctx.send("플리마켓에 올릴 수 없는 상품입니다.")
-
-        else:
-            price = soup.select_one("#__layout > div > div > div.page-content > div.w-100 > div.cards-list > div > div.body > div:nth-child(2) > div:nth-child(2) > div:nth-child(1)").text
-            await ctx.send(message + " : " + price)
-
-    else:
+    if not result['data']['items']:
         await ctx.send("[오류] 아이템이 존재하지 않습니다.")
 
-    await loop.run_in_executor(None, driver.close)
+    else:
+        name = result['data']['items'][0]['name']
+        wikilink = "<" + result['data']['items'][0]['wikiLink'] + ">"
+        vendor_name = ""
+        vendor_price = 0
+        flee_price = 0
+
+        for cur in result['data']['items'][0]['sellFor']:
+            cur_name = cur['vendor']['name']
+            if cur['priceRUB'] > vendor_price and cur_name != "플리마켓":
+                vendor_price = cur['priceRUB']
+                vendor_name = cur_name
+
+            if cur_name == "플리마켓":
+                flee_price = cur['price']
+
+        task_string = ""
+        for cur in result['data']['items'][0]['usedInTasks']:
+            task_string = task_string + cur['name'] + ", 위키 링크 : " + "<" + cur['wikiLink'] + ">" + "\n"
+
+        hideout_result = TarkovDevAPI.hideout_query()
+        hideout_string = ""
+        for cur in hideout_result['data']['hideoutStations']:
+            for levels in cur['levels']:
+                for itemRequirements in levels['itemRequirements']:
+                    if itemRequirements['item']['name'] == name:
+                        hideout_string = hideout_string + cur['name'] + " " + str(levels['level']) + "레벨\n"
 
 
-@가격.error
-async def 가격_error(ctx, error):
+        result_string = "이름 : " + name + "\n\n" + \
+                        "상인 가격 : " + vendor_name + " " + str(vendor_price) + "루블\n" + \
+                        "플리마켓 가격 : " + str(flee_price) + "루블\n\n" + \
+                        "관련 퀘스트 : " + task_string + "\n" + \
+                        "은신처 : " + hideout_string + "\n" + \
+                        "위키 링크 : " + wikilink
+
+        await ctx.send(result_string)
+
+
+@아이템.error
+async def 아이템_error(ctx, error):
     if isinstance(error, commands.MissingRequiredArgument):
         await ctx.send("[오류] 잘못된 명령어. 검색어를 입력해주세요")
 
